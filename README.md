@@ -12,7 +12,7 @@ New features:
 
 ## Installation
 ```bash
-npm i angular-signal-forms
+npm i signal-forms
 ```
 
 ## Usage
