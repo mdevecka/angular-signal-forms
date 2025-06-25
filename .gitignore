@@ -1,0 +1,11 @@
+# compiled output
+/.angular
+/dist
+/node_modules
+/build
+
+# dotenv environment variable files
+.env
+
+# npm
+.npmrc

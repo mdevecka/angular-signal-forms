@@ -1,0 +1,25 @@
+{
+  "name": "angular-signal-forms",
+  "version": "1.0.0",
+  "author": "Marian Devecka",
+  "license": "MIT",
+  "description": "Signal-powered Angular Forms",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mdevecka/angular-signal-forms"
+  },
+  "keywords": [
+    "angular",
+    "typescript",
+    "signals",
+    "forms"
+  ],
+  "peerDependencies": {
+    "@angular/common": ">=17.0.0",
+    "@angular/core": ">=17.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "sideEffects": false
+}
