@@ -26,8 +26,24 @@ export interface FormElementOptions<T> {
 }
 
 export interface FormControlOptions<T> extends FormElementOptions<T> {
-  valueTransformer?: (value: string) => T | undefined;
+  valueTransformer?: (value: string) => T;
 }
+
+type Prettify<T> = T extends T ? { [K in keyof T]: T[K] } : never;
+
+export type FormValueMapper<T> =
+  T extends BaseFormElement<any> ? FormControlMapper<T> :
+  T extends { [K in keyof T]: BaseFormElement<any> } ? Prettify<FormGroupMapper<T>> :
+  T;
+
+export type FormControlMapper<T extends BaseFormElement<any>> =
+  T extends BaseFormElement<infer S> ?
+  S extends { [K in keyof S]: BaseFormElement<any> } ? Prettify<FormGroupMapper<S>> : S
+  : never;
+
+export type FormGroupMapper<T extends { [K in keyof T]: BaseFormElement<any> }> = {
+  [P in keyof T]: FormControlMapper<T[P]>;
+};
 
 export abstract class BaseFormElement<T> {
 
@@ -137,6 +153,8 @@ export abstract class BaseFormElement<T> {
   get status(): FormElementStatus { return this.statusSignal(); }
   get errors() { return this.errorsSignal(); }
   get parent() { return this.parentSignal(); }
+  abstract get value(): any;
+  abstract set value(value: any);
 
   protected set parent(value: BaseFormElement<any> | null) {
     this.parentSignal.set(value);
@@ -170,7 +188,7 @@ export abstract class BaseFormElement<T> {
 
 export class FormControl<T> extends BaseFormElement<T> {
 
-  private valueSignal = signal<T | undefined>(this.initValue);
+  private valueSignal = signal<T>(this.initValue);
   private touchedSignal = signal(false);
   private dirtySignal = signal(false);
 
@@ -180,7 +198,7 @@ export class FormControl<T> extends BaseFormElement<T> {
   override get touched() { return this.touchedSignal(); }
   override get dirty() { return this.dirtySignal(); }
 
-  set value(value: T | undefined) {
+  set value(value: T) {
     this.valueSignal.set(value);
   }
 
@@ -215,9 +233,24 @@ export class FormGroup<T extends { [K in keyof T]: BaseFormElement<any> }> exten
   protected get validatorInput() { return this.controlsSignal(); }
 
   get controls() { return this.controlsSignal(); }
+  get value(): FormValueMapper<T> {
+    const res: any = {};
+    const entries = Object.entries(this.controls) as [string, BaseFormElement<any>][];
+    for (const [name, ctrl] of entries) {
+      res[name] = ctrl.value;
+    }
+    return res as FormValueMapper<T>;
+  }
 
   set controls(value: T) {
     this.controlsSignal.set(value);
+  }
+
+  set value(value: FormValueMapper<T>) {
+    const entries = Object.entries(this.controls) as [string, BaseFormElement<any>][];
+    for (const [name, ctrl] of entries) {
+      ctrl.value = (value as Record<string, any>)[name];
+    }
   }
 
 }
@@ -230,9 +263,18 @@ export class FormArray<T extends BaseFormElement<any>> extends BaseFormElement<T
   protected get validatorInput() { return this.controlsSignal(); }
 
   get controls() { return this.controlsSignal(); }
+  get value(): FormValueMapper<T> {
+    return this.controls.map(c => c.value) as FormValueMapper<T>;
+  }
 
   set controls(value: T[]) {
     this.controlsSignal.set(value);
+  }
+
+  set value(value: FormValueMapper<T>) {
+    for (let i = 0; i < this.controls.length; i++) {
+      this.controls[i].value = value[i];
+    }
   }
 
   updateControls(func: (controls: T[]) => T[]) {
@@ -253,8 +295,8 @@ export function formControl<T>(value: T, opt?: FormControlOptions<NoInfer<T>>) {
   return new FormControl(value, opt);
 }
 
-export function formNumeric(value: number, opt?: FormControlOptions<number>): FormControl<number> {
-  return new FormControl(value, { ...opt, valueTransformer: (value) => parseInt(value) || undefined });
+export function formNumeric(value: number | undefined, opt?: FormControlOptions<number | undefined>) {
+  return new FormControl<number | undefined>(value, { ...opt, valueTransformer: (value) => parseInt(value) || undefined });
 }
 
 export function formGroup<T extends { [K in keyof T]: FormElement }>(controls: T, opt?: FormElementOptions<NoInfer<T>>): FormGroup<T> {

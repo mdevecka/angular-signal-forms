@@ -1,6 +1,6 @@
 import { TestBed, fakeAsync, tick, flush, flushMicrotasks } from '@angular/core/testing';
 import { Injector, signal } from '@angular/core';
-import { FormElementValidatorFn, formControl, formGroup, formArray, formNumeric } from './forms';
+import { FormElementValidatorFn, FormControlMapper, formControl, formGroup, formArray, formNumeric } from './forms';
 import { useValidator, required, minLength, min } from './validators';
 import { TestComponent } from './test.component';
 
@@ -255,6 +255,45 @@ describe('forms', () => {
     fixture.detectChanges();
     expect(ageInput.value).toBe('28');
     expectToContain(ageInput.classList, ['ng-valid', 'ng-touched', 'ng-dirty']);
+  }));
+
+  it('form value get/set', fakeAsync(() => {
+    const injector = TestBed.inject(Injector);
+    const [form] = createForm(injector);
+    flushMicrotasks();
+    const initialValue: FormControlMapper<typeof form> = {
+      name: 'John',
+      age: 33,
+      occupation: 'architect',
+      deliveryMethod: 'email',
+      paperReceipt: true,
+      addressEnabled: true,
+      address: {
+        street: 'main street',
+        town: 'Hamburg',
+        country: 'Germany'
+      },
+      comments: ['one', 'two']
+    };
+    expect(form.value).toEqual(initialValue);
+    const newValue: FormControlMapper<typeof form> = {
+      name: 'John',
+      age: 34,
+      occupation: 'architect',
+      deliveryMethod: 'email',
+      paperReceipt: true,
+      addressEnabled: true,
+      address: {
+        street: 'second street',
+        town: 'Berlin',
+        country: 'Germany'
+      },
+      comments: ['1', '2']
+    };
+    form.value = newValue;
+    flushMicrotasks();
+    expect(form.value).not.toEqual(initialValue);
+    expect(form.value).toEqual(newValue);
   }));
 
 });

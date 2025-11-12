@@ -5,19 +5,14 @@
   "license": "MIT",
   "description": "Signal-powered Angular Forms",
   "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
     "build:lib": "ng build angular-signal-forms --configuration development",
     "build:lib:prod": "ng build angular-signal-forms",
     "build-pack": "npm run build:lib:prod && node copy-files.mjs && cd dist/angular-signal-forms && npm pack && cd ../..",
     "build-publish": "npm run build:lib:prod && node copy-files.mjs && cd dist/angular-signal-forms && npm publish && cd ../..",
-    "watch": "ng build --watch --configuration development",
     "test": "ng test angular-signal-forms",
     "lint": "eslint \"projects/**/*.ts\" --fix",
     "format": "tsfmt -r"
   },
-  "private": true,
   "dependencies": {
     "@angular/animations": "^17.3.0",
     "@angular/common": "^17.3.0",

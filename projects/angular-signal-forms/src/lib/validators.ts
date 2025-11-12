@@ -22,14 +22,14 @@ export function maxLength(length: number): FormElementValidatorFn<string> {
       : { status: 'VALID' };
 }
 
-export function min(minValue: number): FormElementValidatorFn<number> {
-  return (value?: number) =>
+export function min(minValue: number): FormElementValidatorFn<number | undefined> {
+  return (value?: number | undefined) =>
     (value == null || value < minValue) ? { status: 'INVALID', errors: { min: { value: value, minValue: minValue } } }
       : { status: 'VALID' };
 }
 
-export function max(maxValue: number): FormElementValidatorFn<number> {
-  return (value?: number) =>
+export function max(maxValue: number): FormElementValidatorFn<number | undefined> {
+  return (value?: number | undefined) =>
     (value == null || value > maxValue) ? { status: 'INVALID', errors: { max: { value: value, maxValue: maxValue } } }
       : { status: 'VALID' };
 }
