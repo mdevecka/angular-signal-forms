@@ -14,7 +14,7 @@ export type ValidationState = { status: 'VALID' } | { status: 'PENDING' } | { st
 export type FormElement = FormControl<any> | FormGroup<any> | FormArray<any>;
 
 export interface FormElementValidatorFn<T> {
-  (value?: T): ValidationResult | Promise<ValidationResult> | Observable<ValidationResult>;
+  (value: T): ValidationResult | Promise<ValidationResult> | Observable<ValidationResult>;
 }
 
 export interface FormElementOptions<T> {
@@ -53,7 +53,7 @@ export abstract class BaseFormElement<T> {
   private validatorsSignal = signal<FormElementValidatorFn<T>[]>(this.opt?.validators ?? []);
 
   protected get childControls(): BaseFormElement<any>[] { return []; }
-  protected abstract get validatorInput(): T | undefined;
+  protected abstract get validatorInput(): T;
 
   private childrenTouched = computed(() => this.childControls.some(c => c.touched));
   private childrenDirty = computed(() => this.childControls.some(c => c.dirty));
@@ -108,6 +108,8 @@ export abstract class BaseFormElement<T> {
     return (hasPending) ? 'PENDING' : 'VALID';
   });
 
+  private currentOperation: WeakMap<FormElementValidatorFn<T>, ValidationResult | Promise<ValidationResult> | Observable<ValidationResult>> = new WeakMap();
+
   private validationEffect = effect(() => {
     const validators = this.validatorsSignal();
     const results = this.validatorResults();
@@ -119,11 +121,21 @@ export abstract class BaseFormElement<T> {
       const validator = validators[i];
       const result = results[i];
       const res = (disabled || readonly || hidden) ? { status: 'VALID' as const } : validator(value);
+      this.currentOperation.set(validator, res);
       if (res instanceof Promise) {
         result.set({ status: 'PENDING' });
-        res.then(value => result.set(value));
+        res.then(value => {
+          if (this.currentOperation.get(validator) === res) {
+            result.set(value);
+          }
+        });
       } else if (res instanceof Observable) {
-        res.subscribe(value => result.set(value));
+        result.set({ status: 'PENDING' });
+        res.subscribe(value => {
+          if (this.currentOperation.get(validator) === res) {
+            result.set(value);
+          }
+        });
       } else {
         result.set(res);
       }

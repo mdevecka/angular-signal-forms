@@ -9,10 +9,19 @@ function sleep(ms: number) {
 }
 
 export function testValidator(): FormElementValidatorFn<string> {
-  return async (value: string | undefined) => {
+  return async (value: string) => {
     await sleep(3000);
-    return (value == null || value.length < 5) ? { status: 'INVALID', errors: { min: { minLength: 5 } } } :
+    return (value.length < 5) ? { status: 'INVALID', errors: { min: { minLength: 5 } } } :
       { status: 'VALID' };
+  };
+}
+
+export function testValidatorRaceCondition(): FormElementValidatorFn<number | undefined> {
+  return async (value: number | undefined) => {
+    if (value == null)
+      return { status: 'VALID' };
+    await sleep(value);
+    return (value > 3000) ? { status: 'INVALID', errors: { error: true } } : { status: 'VALID' };
   };
 }
 
@@ -161,6 +170,32 @@ describe('forms', () => {
     flushMicrotasks();
     expect(form.status).toBe('VALID');
     expect(form.controls.name.status).toBe('VALID');
+  }));
+
+  it('form async validation race condition', fakeAsync(() => {
+    const injector = TestBed.inject(Injector);
+    const [form] = createForm(injector);
+    flushMicrotasks();
+    form.controls.age.addValidator(testValidatorRaceCondition());
+    form.controls.age.value = 1000;
+    tick(1000);
+    flushMicrotasks();
+    expect(form.status).toBe('VALID');
+    expect(form.controls.age.status).toBe('VALID');
+    form.controls.age.value = 5000;
+    tick(1000);
+    expect(form.status).toBe('PENDING');
+    expect(form.controls.age.status).toBe('PENDING');
+    flushMicrotasks();
+    form.controls.age.value = 2000;
+    tick(3000);
+    expect(form.status).toBe('VALID');
+    expect(form.controls.age.status).toBe('VALID');
+    flushMicrotasks();
+    tick(2000);
+    flushMicrotasks();
+    expect(form.status).toBe('VALID');
+    expect(form.controls.age.status).toBe('VALID');
   }));
 
   it('form add/remove control', fakeAsync(() => {
