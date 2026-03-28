@@ -1,7 +1,7 @@
 import { TestBed, fakeAsync, tick, flush, flushMicrotasks } from '@angular/core/testing';
 import { Injector, signal } from '@angular/core';
 import { FormElementValidatorFn, FormControlMapper, formControl, formGroup, formArray, formNumeric } from './forms';
-import { useValidator, required, minLength, min } from './validators';
+import { useValidator, debounce, required, minLength, min } from './validators';
 import { TestComponent } from './test.component';
 
 function sleep(ms: number) {
@@ -196,6 +196,44 @@ describe('forms', () => {
     flushMicrotasks();
     expect(form.status).toBe('VALID');
     expect(form.controls.age.status).toBe('VALID');
+  }));
+
+  it('form async validation debounce', fakeAsync(() => {
+    const injector = TestBed.inject(Injector);
+    const [form] = createForm(injector);
+    flushMicrotasks();
+    expect(form.status).toBe('VALID');
+    expect(form.controls.name.status).toBe('VALID');
+    form.controls.name.addValidator(debounce(testValidator(), 3000));
+    flushMicrotasks();
+    expect(form.status).toBe('PENDING');
+    expect(form.controls.name.status).toBe('PENDING');
+    tick(1000);
+    expect(form.status).toBe('PENDING');
+    expect(form.controls.name.status).toBe('PENDING');
+    tick(3000);
+    expect(form.status).toBe('PENDING');
+    expect(form.controls.name.status).toBe('PENDING');
+    tick(2000);
+    expect(form.status).toBe('INVALID');
+    expect(form.controls.name.status).toBe('INVALID');
+    form.controls.name.value = 'Peter';
+    flushMicrotasks();
+    expect(form.status).toBe('PENDING');
+    expect(form.controls.name.status).toBe('PENDING');
+    tick(3000);
+    expect(form.status).toBe('PENDING');
+    expect(form.controls.name.status).toBe('PENDING');
+    form.controls.name.value = 'Lukas';
+    flushMicrotasks();
+    expect(form.status).toBe('PENDING');
+    expect(form.controls.name.status).toBe('PENDING');
+    tick(3000);
+    expect(form.status).toBe('PENDING');
+    expect(form.controls.name.status).toBe('PENDING');
+    tick(3000);
+    expect(form.status).toBe('VALID');
+    expect(form.controls.name.status).toBe('VALID');
   }));
 
   it('form add/remove control', fakeAsync(() => {

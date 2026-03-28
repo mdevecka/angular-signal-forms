@@ -1,7 +1,25 @@
-import { FormElementValidatorFn } from './forms';
+import { FormElementValidatorFn, ValidationResult } from './forms';
+import { Observable } from 'rxjs';
 
 export function useValidator<T>(validator: FormElementValidatorFn<T>, cond: () => boolean): FormElementValidatorFn<T> {
   return (value: T) => (!cond()) ? { status: 'VALID' } : validator(value);
+}
+
+export function debounce<T>(validator: FormElementValidatorFn<T>, time: number): FormElementValidatorFn<T> {
+  let timer: number | null = null;
+  return (value: T) => {
+    if (timer != null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    return new Promise(resolve => {
+      timer = setTimeout(() => {
+        const result = validator(value);
+        const pro = (result instanceof Observable) ? result.toPromise() as Promise<ValidationResult> : Promise.resolve(result);
+        resolve(pro);
+      }, time);
+    });
+  };
 }
 
 export function required(): FormElementValidatorFn<any> {
